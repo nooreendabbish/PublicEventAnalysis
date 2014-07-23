@@ -1,0 +1,274 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Bostalker</title>
+  <style>
+      .pp-slider { width: 150px; float:left;  -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -o-user-select: none; user-select: none; height: 30px; }
+    .pp-slider .pp-slider-scale { background-color: #aaa; height: 1px; border-bottom: 1px solid #efefef; width: 120px; margin-top: 6px; float: left; }
+    .pp-slider .pp-slider-scale .pp-slider-button { width: 12px; border-radius: 2px; border: 1px solid #adadad; height: 16px; position: relative; top: -7px; left: 0px; background-color: #efefef; cursor: pointer; }
+    .pp-slider .pp-slider-scale .pp-slider-button .pp-slider-divies { border-left: 1px solid #adadad; border-right: 1px solid #adadad; position: relative; left: 3px; top: 3px; width: 4px; height: 10px; }
+    .pp-slider .pp-slider-scale .pp-slider-button:hover { border-color: #777; background-color: #eee;  }
+    .pp-slider .pp-slider-scale .pp-slider-tooltip { width: 24px; height: 20px; position: relative; top: -5px; left: 0px; text-align: center; font-size: 10px; color: #aaa; }
+    .pp-slider .pp-slider-min { float: left; width: 15px; color: #aaa; font-size: 10px; }
+    .pp-slider .pp-slider-max { float: left; width: 15px; color: #aaa; font-size: 10px; text-align: right; }
+  </style>
+</head>
+<body>
+  <button id="get">Get Next Page</button>
+    <p id="log">Log</p>
+<br/><br/>
+<div style="padding: 10px;">
+
+    <input type="hidden" value="40" id="slider1"/>
+
+</div>
+  <br/><br/>
+  <button id="makegraph">Graph Activity</button>
+  <svg id="svg_donut"></svg>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js" ></script>
+  <script src="moment.js"></script>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script>
+  var currentURL = "https://api.github.com/users/mbostock/events/public";
+
+  var allEvents = [];
+  var oneDay = [];
+
+function getHeader(currentPageURL) {
+
+    $.ajax({
+        type: "get",
+        url: currentPageURL,
+        dataType: "json",
+        success: function(data, textStatus, xhr) {
+
+            var h = xhr.getResponseHeader("Link");
+            appendEventsFromData(data);
+            addDuration();
+          
+            var theurl = extractURLFromHeader(h);
+
+            $('#log').append("<p>" + theurl + "<br/>" + printEvents() + "</p>");
+
+            currentURL = theurl;
+        }
+    });
+}
+    
+function addDuration(){
+var diff = 0;
+  for (i = 0; i < allEvents.length; i++){
+    if (i == allEvents.length-1) {
+      diff = 0;
+    }else{
+    diff = (allEvents[i].time - allEvents[i+1].time);}
+    allEvents[i]["duration"] = diff/(1000*60*60);
+  }
+};
+    
+function extractURLFromHeader(header) {
+
+    var urlPattern = /\<([^<]+)\>/
+    return urlPattern.exec(header)[1].toString();
+};
+
+function printEvents(event){
+  var eventString = ""
+  allEvents.forEach(function(event){
+  eventString += event.time +", "+ event.type.toString() +"\n";
+  });
+  return eventString;
+};
+    
+function appendEventsFromData(data) {
+
+    data.forEach( function(entry) {
+        var events = { };
+        events["time"] = Date.parse(entry["created_at"]);
+        events["type"] = entry["type"];
+    allEvents.push(events);
+    });
+};
+
+$('button#get').click(function() {
+    console.log(currentURL);
+    getHeader(currentURL);
+
+});
+
+$('button#makegraph').click(function() {
+   makeDonut();
+});
+
+function makeDonut(){
+var cScale = d3.scale.linear().domain([0, 24]).range([0, 2 * Math.PI]);
+
+data = makeDonutData();
+
+var vis = d3.select("#svg_donut");
+
+var arc = d3.svg.arc()
+.innerRadius(50)
+.outerRadius(100)
+.startAngle(function(d){return cScale(d[0]);})
+.endAngle(function(d){return cScale(d[1]);});
+
+vis.selectAll("path")
+.data(data)
+.enter()
+.append("path")
+.attr("d", arc)
+.style("fill", function(d){return d[2];})
+.attr("transform", "translate(300,200)");
+
+};
+
+function makeDonutData(){
+var MDD = [];
+var eventDict = {"IssueCommentEvent":"#321414",
+                 "CreateEvent":"#7FFF00",
+                 "PushEvent":"#006400",
+                 "PullRequestEvent":"#D73B3E",
+                 "GollumEvent":"#FF0000",
+                 "DeleteEvent":"#F4C2C2"}
+for (i=0; i<allEvents.length; i++){
+ var segment = [];
+ if (i==0){ segment[0] = 0; } 
+  else { segment[0] = MDD[i-1][1]};
+ segment[1] =  segment[0]+allEvents[i].duration;
+ if (allEvents[i].type in eventDict) { 
+ segment[2] = eventDict[allEvents[i].type];
+ }else{  segment[2] = "#FFFFFF";}
+  MDD[i] = segment;
+}
+  console.log(MDD);
+  var i = 0;
+  while (MDD[i][1] < 24){
+    i++
+      }
+  return MDD.slice(0,i);
+
+};
+
+    
+    
+ (function ($) {
+
+    var PPSliderClass = function (el, opts) {
+        var element = $(el);
+        var options = opts;
+        var isMouseDown = false;
+        var currentVal = 0;
+
+        element.wrap('<div/>')
+        var container = $(el).parent();
+
+        container.addClass('pp-slider');
+        container.addClass('clearfix');
+
+        container.append('<div class="pp-slider-min">-</div><div class="pp-slider-scale"><div class="pp-slider-button"><div class="pp-slider-divies"></div></div><div class="pp-slider-tooltip"></div></div><div class="pp-slider-max">+</div>');
+        
+        if (typeof(options) != 'undefined' && typeof(options.hideTooltip) != 'undefined' && options.hideTooltip == true)
+        {
+          container.find('.pp-slider-tooltip').hide();
+        }
+
+        if (typeof(options.width) != 'undefined')
+        {
+          container.css('width',(options.width+'px'));
+        }
+        container.find('.pp-slider-scale').css('width',(container.width()-30)+'px');
+
+        var startSlide = function (e) {            
+          
+          isMouseDown = true;
+          var pos = getMousePosition(e);
+          startMouseX = pos.x;
+          
+          lastElemLeft = ($(this).offset().left - $(this).parent().offset().left);
+          updatePosition(e);
+
+          return false;
+        };
+        
+        var getMousePosition = function (e) {
+          //container.animate({ scrollTop: rowHeight }, options.scrollSpeed, 'linear', ScrollComplete());
+          var posx = 0;
+          var posy = 0;
+
+          if (!e) var e = window.event;
+
+          if (e.pageX || e.pageY) {
+            posx = e.pageX;
+            posy = e.pageY;
+          }
+          else if (e.clientX || e.clientY) {
+            posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+            posy = e.clientY + document.body.scrollTop  + document.documentElement.scrollTop;
+          }
+
+          return { 'x': posx, 'y': posy };
+        };
+
+        var updatePosition = function (e) {
+          var pos = getMousePosition(e);
+
+          var spanX = (pos.x - startMouseX);
+
+          var newPos = (lastElemLeft + spanX)
+          var upperBound = (container.find('.pp-slider-scale').width()-container.find('.pp-slider-button').width());
+          newPos = Math.max(0,newPos);
+          newPos = Math.min(newPos,upperBound);
+          currentVal = Math.round((newPos/upperBound)*100,0);
+
+          container.find('.pp-slider-button').css("left", newPos);
+          container.find('.pp-slider-tooltip').html(currentVal+'%');
+          container.find('.pp-slider-tooltip').css('left', newPos-6);
+        };
+
+        var moving = function (e) {
+          if(isMouseDown){
+            updatePosition(e);
+            return false;
+          }
+        };
+
+        var dropCallback = function (e) {
+          isMouseDown = false;
+          element.val(currentVal);
+          if(typeof element.options != 'undefined' && typeof element.options.onChanged == 'function'){
+            element.options.onChanged.call(this, null);
+          }
+
+        };
+
+        container.find('.pp-slider-button').bind('mousedown',startSlide);
+
+        $(document).mousemove(function(e) { moving(e); });
+        $(document).mouseup(function(e){ dropCallback(e); });
+        
+    };
+
+    /*******************************************************************************************************/
+
+    $.fn.PPSlider = function (options) {
+        var opts = $.extend({}, $.fn.PPSlider.defaults, options);
+
+        return this.each(function () {
+            new PPSliderClass($(this), opts);
+        });
+    }
+
+    $.fn.PPSlider.defaults = {
+        width: 150
+    };
+
+
+})(jQuery);
+
+
+$("#slider1").PPSlider({width: 300});   
+  
+  </script>
+</body>
+</html>

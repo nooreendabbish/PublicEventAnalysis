@@ -1,0 +1,112 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>GitHub Public Event Timing</title>
+</head>
+<body>
+  <button id="get">Get Next Page</button>
+    <p id="log">Log</p>
+  <button id="graphbutton">Make Graph</button>
+  <svg id="svg_donut" width="600" height="400"></svg>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js" ></script>
+  <script src="moment.js"></script>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script>
+  var currentURL = "https://api.github.com/users/mbostock/events/public";
+
+var allEvents = [];
+var oneDay = [];
+
+function getHeader(currentPageURL) {
+
+    $.ajax({
+        type: "get",
+        url: currentPageURL,
+        dataType: "json",
+        success: function(data, textStatus, xhr) {
+
+            var h = xhr.getResponseHeader("Link");
+            allEvents = appendEventsFromData(data);
+
+            var theurl = extractURLFromHeader(h);
+
+            $('#log').append("<p>" + theurl + "<br/>" + allEvents.toString() + "</p>");
+
+            currentURL = theurl;
+        }
+    });
+}
+
+function extractURLFromHeader(header) {
+
+    var urlPattern = /\<([^<]+)\>/
+    return urlPattern.exec(header)[1].toString();
+};
+
+
+function appendEventsFromData(data) {
+    var events = [];
+    for (i = 0; i < data.length; i++) {
+        events[0] = data[i]["created_at"];
+        events[1] = data[i]["type"];
+    allEvents.push(events);
+    }
+    return allEvents;
+};
+
+$('button#get').click(function() {
+    console.log(currentURL);
+    getHeader(currentURL);
+});
+
+    
+$('#graphbutton').click(function() {
+
+    findDay();
+
+});
+
+function findDay(){
+ var first = Date.parse(allEvents[0][0]);
+ console.log("first: "+first);
+ test = true;
+ eventDict = {"PushEvent":"#000000", "IssueCommentEvent":"#FFEBCD", "PullRequestEvent":"#0000FF", "PushEvent":"#8A2BE2", "CreateEvent":"#A52A2A","DeleteEvent":"#DEB887", "GollumEvent":"#5F9EA0"}
+ oneDay.push([0,eventDict[allEvents[0][1]]]);
+for (i = 1; i <= allEvents.length ; i++){
+ while (test) {
+   var diff = (first - Date.parse(allEvents[i][0]))/(24*60*60*1000);
+   console.log(Date.parse(allEvents[i][0]));
+   console.log(diff);
+   test = (1.0 > diff);
+   console.log(test);
+   if (test){
+     oneDay.push([(diff*24*60),eventDict[allEvents[i][1]]]);
+  }
+ }   
+}
+}
+    
+var cScale = d3.scale.linear().domain([0, 24*60]).range([0, 2 * Math.PI]);
+
+data = [[0,50,"#AA8888"], [50,75,"#88BB88"], [75,100,"#8888CC"]]
+
+var vis = d3.select("#svg_donut");
+
+var arc = d3.svg.arc()
+.innerRadius(50)
+.outerRadius(100)
+.startAngle(function(d){return cScale(d[0]);})
+.endAngle(function(d){return cScale(d[1]);});
+
+vis.selectAll("path")
+.data(data)
+.enter()
+.append("path")
+.attr("d", arc)
+.style("fill", function(d){return d[2];})
+.attr("transform", "translate(300,200)");
+
+  
+  </script>
+</body>
+</html>

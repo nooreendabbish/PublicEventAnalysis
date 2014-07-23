@@ -1,0 +1,15 @@
+import requests
+import json
+
+
+def getlocation(linkIn):
+    requested = requests.get(linkIn)
+    userinfo = json.loads(requested.text)
+    location = userinfo["location"]
+    return location
+
+
+username = 'nooreendabbish'
+firstlink = 'https://api.github.com/users/'+username+'
+
+getlocation(firstlink)

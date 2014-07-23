@@ -1,0 +1,9 @@
+
+f = open("manuelkiesslingPublicEvents.txt", "r")
+events = pickle.load(f)
+f.close()
+
+eventList = [list(x) for x in events]
+print eventList
+
+#events['weekday'] = data['my_dt'].apply(lambda x: x.weekday())
